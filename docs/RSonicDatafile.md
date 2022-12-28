@@ -1,0 +1,2 @@
+- 4th byte is the number of directories
+- The byte before the dir name is the amount of characters in the dir name
