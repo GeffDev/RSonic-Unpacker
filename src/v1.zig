@@ -1,11 +1,10 @@
 const std = @import("std");
 
-const Directories = struct {
+const Directory = struct {
     dir_offset: u64,
     dir_name: []const u8,
 };
 
-var v_file_size: u64 = 0;
 var virtual_file_offset: u64 = 0;
 
 pub var file_handle: std.fs.File = undefined;
@@ -17,8 +16,6 @@ pub fn unpackV1DataFile() !void {
         return;
     };
     file_handle = file;
-    const stat = try file.stat();
-    std.log.info("{}", .{stat.size});
 
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};
     const allocator = gpa.allocator();
@@ -45,7 +42,8 @@ pub fn unpackV1DataFile() !void {
 
     // array length must be comptime known so lets just
     // set this to 64 i guess
-    var directories: [64]Directories = std.mem.zeroes([64]Directories);
+    var directories: [64]Directory = std.mem.zeroes([64]Directory);
+    var v_file_size: u64 = 0;
 
     var i: usize = 0;
     while (i < dir_amount) : (i += 1) {
@@ -86,6 +84,8 @@ pub fn unpackV1DataFile() !void {
             fileRead(&f_name_len, 1) catch |err| {
                 if (err == error.EndOfStream) {
                     std.log.info("unpacked all files", .{});
+                    const leak = gpa.deinit();
+                    std.log.info("allocator leak = {}", .{leak});
                 }
                 return;
             };
@@ -110,7 +110,7 @@ pub fn unpackV1DataFile() !void {
             v_file_size += @as(u32, file_buf) << 24;
 
             const unpacked_file = try cur_dir.createFile(sliced_f_name, .{});
-            try writeFile(unpacked_file, allocator);
+            try writeFile(unpacked_file, v_file_size, allocator);
             allocator.free(sliced_f_name);
         }
     }
@@ -123,14 +123,10 @@ fn fileRead(dest: *u8, bytes_to_read: usize) !void {
     }
 }
 
-/// TODO: there's probably a wayyyy faster way of doing this
-/// please speed this up
-fn writeFile(file: std.fs.File, allocator: std.mem.Allocator) !void {
-    var i: usize = 0;
-    var fileData = try allocator.alloc(u8, v_file_size);
-    while (i < v_file_size) : (i += 1) {
-        fileData[i] = try file_handle.reader().readByte();
-    }
-    _ = try file.write(fileData);
-    allocator.free(fileData);
+fn writeFile(file: std.fs.File, bytes_to_read: u64, allocator: std.mem.Allocator) !void {
+    //var i: usize = 0;
+    var file_data = try allocator.alloc(u8, bytes_to_read);
+    _ = try file_handle.reader().readAll(file_data);
+    _ = try file.write(file_data);
+    allocator.free(file_data);
 }
