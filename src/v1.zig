@@ -12,15 +12,16 @@ pub var file_handle: std.fs.File = undefined;
 pub var cwd: std.fs.Dir = undefined;
 
 pub fn unpackV1DataFile() !void {
-    var buffer: [1000]u8 = undefined;
-    var fba = std.heap.FixedBufferAllocator.init(&buffer);
-    const allocator = fba.allocator();
-
     var file = std.fs.cwd().openFile("Data.bin", .{}) catch {
         std.log.err("could not open data file!", .{});
         return;
     };
     file_handle = file;
+    const stat = try file.stat();
+    std.log.info("{}", .{stat.size});
+
+    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
+    const allocator = gpa.allocator();
 
     cwd = std.fs.cwd();
 
@@ -109,7 +110,7 @@ pub fn unpackV1DataFile() !void {
             v_file_size += @as(u32, file_buf) << 24;
 
             const unpacked_file = try cur_dir.createFile(sliced_f_name, .{});
-            try writeFile(unpacked_file);
+            try writeFile(unpacked_file, allocator);
             allocator.free(sliced_f_name);
         }
     }
@@ -124,9 +125,12 @@ fn fileRead(dest: *u8, bytes_to_read: usize) !void {
 
 /// TODO: there's probably a wayyyy faster way of doing this
 /// please speed this up
-fn writeFile(file: std.fs.File) !void {
+fn writeFile(file: std.fs.File, allocator: std.mem.Allocator) !void {
     var i: usize = 0;
+    var fileData = try allocator.alloc(u8, v_file_size);
     while (i < v_file_size) : (i += 1) {
-        try file.writer().writeByte(try file_handle.reader().readByte());
+        fileData[i] = try file_handle.reader().readByte();
     }
+    _ = try file.write(fileData);
+    allocator.free(fileData);
 }
