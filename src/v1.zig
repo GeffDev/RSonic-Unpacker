@@ -81,7 +81,7 @@ pub fn unpackV1DataFile() !void {
 
         while (try file.getPos() != directories[i + 1].dirOffset) {
             var fName: [64]u8 = std.mem.zeroes([64]u8);
-            var fNameLen: u8 =  0;
+            var fNameLen: u8 = 0;
             fileRead(&fNameLen, 1) catch |err| {
                 if (err == error.EndOfStream) {
                     std.log.info("unpacked all files", .{});
@@ -95,7 +95,7 @@ pub fn unpackV1DataFile() !void {
             }
 
             // getting away with not using an allocator :smirk:
-            std.log.info("unpacking file: {s}{s}", .{directories[i].dirName, fName});
+            std.log.info("unpacking file: {s}{s}", .{ directories[i].dirName, fName });
 
             const slicedFName = try allocator.dupe(u8, fName[0..fNameLen]);
 
