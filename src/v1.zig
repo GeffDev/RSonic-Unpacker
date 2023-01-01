@@ -59,14 +59,7 @@ pub fn unpackV1DataFile() !void {
         const sliced_dir = try allocator.dupe(u8, dir_read[0..dir_name_len]);
         directories[i].dir_name = sliced_dir;
 
-        try fileRead(&file_buf, 1);
-        file_header = file_buf;
-        try fileRead(&file_buf, 1);
-        file_header += @as(u32, file_buf) << 8;
-        try fileRead(&file_buf, 1);
-        file_header += @as(u32, file_buf) << 16;
-        try fileRead(&file_buf, 1);
-        file_header += @as(u32, file_buf) << 24;
+        file_header = try file_handle.reader().readIntLittle(u32);
 
         virtual_file_offset = file_header + dir_thing;
         directories[i].dir_offset = virtual_file_offset;
@@ -100,14 +93,7 @@ pub fn unpackV1DataFile() !void {
 
             const sliced_f_name = try allocator.dupe(u8, f_name[0..f_name_len]);
 
-            try fileRead(&file_buf, 1);
-            v_file_size = file_buf;
-            try fileRead(&file_buf, 1);
-            v_file_size += @as(u32, file_buf) << 8;
-            try fileRead(&file_buf, 1);
-            v_file_size += @as(u32, file_buf) << 16;
-            try fileRead(&file_buf, 1);
-            v_file_size += @as(u32, file_buf) << 24;
+            v_file_size = try file_handle.reader().readIntLittle(u32);
 
             const unpacked_file = try cur_dir.createFile(sliced_f_name, .{});
             try writeFile(unpacked_file, v_file_size, allocator);
@@ -124,7 +110,6 @@ fn fileRead(dest: *u8, bytes_to_read: usize) !void {
 }
 
 fn writeFile(file: std.fs.File, bytes_to_read: u64, allocator: std.mem.Allocator) !void {
-    //var i: usize = 0;
     var file_data = try allocator.alloc(u8, bytes_to_read);
     _ = try file_handle.reader().readAll(file_data);
     _ = try file.write(file_data);
