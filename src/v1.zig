@@ -10,9 +10,9 @@ var virtual_file_offset: u64 = 0;
 pub var file_handle: std.fs.File = undefined;
 pub var cwd: std.fs.Dir = undefined;
 
-pub fn unpackV1DataFile() !void {
-    var file = std.fs.cwd().openFile("Data.bin", .{}) catch {
-        std.log.err("could not open data file!", .{});
+pub fn unpackV1DataFile(file_name: ?[:0]const u8) !void {
+    var file = std.fs.cwd().openFile(file_name.?, .{}) catch {
+        std.log.err("could not open data file {s}!", .{file_name.?});
         return;
     };
     file_handle = file;
