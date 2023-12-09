@@ -1,3 +1,5 @@
+// wow. this code is terrible lmao
+
 const std = @import("std");
 
 const Directory = struct {
@@ -59,7 +61,7 @@ pub fn unpackV1DataFile(file_name: ?[:0]const u8) !void {
         const sliced_dir = try allocator.dupe(u8, dir_read[0..dir_name_len]);
         directories[i].dir_name = sliced_dir;
 
-        file_header = try file_handle.reader().readIntLittle(u32);
+        file_header = try file_handle.reader().readInt(u32, .little);
 
         virtual_file_offset = file_header + dir_thing;
         directories[i].dir_offset = virtual_file_offset;
@@ -76,6 +78,9 @@ pub fn unpackV1DataFile(file_name: ?[:0]const u8) !void {
             var f_name_len: u8 = 0;
             fileRead(&f_name_len, 1) catch |err| {
                 if (err == error.EndOfStream) {
+                    for (directories) |dir| {
+                        allocator.free(dir.dir_name);
+                    }
                     std.log.info("unpacked all files", .{});
                     const leak = gpa.deinit();
                     std.log.info("allocator leak = {}", .{leak});
@@ -93,7 +98,7 @@ pub fn unpackV1DataFile(file_name: ?[:0]const u8) !void {
 
             const sliced_f_name = try allocator.dupe(u8, f_name[0..f_name_len]);
 
-            v_file_size = try file_handle.reader().readIntLittle(u32);
+            v_file_size = try file_handle.reader().readInt(u32, .little);
 
             const unpacked_file = try cur_dir.createFile(sliced_f_name, .{});
             try writeFile(unpacked_file, v_file_size, allocator);
@@ -110,7 +115,7 @@ fn fileRead(dest: *u8, bytes_to_read: usize) !void {
 }
 
 fn writeFile(file: std.fs.File, bytes_to_read: u64, allocator: std.mem.Allocator) !void {
-    var file_data = try allocator.alloc(u8, bytes_to_read);
+    const file_data = try allocator.alloc(u8, bytes_to_read);
     _ = try file_handle.reader().readAll(file_data);
     _ = try file.write(file_data);
     allocator.free(file_data);

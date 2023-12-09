@@ -7,7 +7,7 @@ pub fn main() !void {
     var timer = try std.time.Timer.start();
     // Parse arguments
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};
-    var alloc = gpa.allocator();
+    const alloc = gpa.allocator();
     var args = try std.process.ArgIterator.initWithAllocator(alloc);
     _ = args.next();
     const file_name = args.next();
